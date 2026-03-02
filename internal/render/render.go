@@ -21,7 +21,7 @@ func (r NonHighlightedFile) InternalType() string {
 	return "NonHighlightedFile"
 }
 
-func RenderFiles(files []*git.File, rawBaseURL ...string) []RenderedFile {
+func RenderFiles(files []*git.File, rawBaseURL string) []RenderedFile {
 	const numWorkers = 10
 	jobs := make(chan int, numWorkers)
 	renderedFiles := make([]RenderedFile, len(files))
@@ -29,11 +29,7 @@ func RenderFiles(files []*git.File, rawBaseURL ...string) []RenderedFile {
 
 	worker := func() {
 		for idx := range jobs {
-			baseURL := ""
-			if len(rawBaseURL) > 0 {
-				baseURL = rawBaseURL[0]
-			}
-			renderedFiles[idx] = processFile(files[idx], baseURL)
+			renderedFiles[idx] = processFile(files[idx], rawBaseURL)
 		}
 		wg.Done()
 	}
