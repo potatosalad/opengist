@@ -21,7 +21,7 @@ func (r NonHighlightedFile) InternalType() string {
 	return "NonHighlightedFile"
 }
 
-func RenderFiles(files []*git.File) []RenderedFile {
+func RenderFiles(files []*git.File, rawBaseURL ...string) []RenderedFile {
 	const numWorkers = 10
 	jobs := make(chan int, numWorkers)
 	renderedFiles := make([]RenderedFile, len(files))
@@ -29,7 +29,11 @@ func RenderFiles(files []*git.File) []RenderedFile {
 
 	worker := func() {
 		for idx := range jobs {
-			renderedFiles[idx] = processFile(files[idx])
+			baseURL := ""
+			if len(rawBaseURL) > 0 {
+				baseURL = rawBaseURL[0]
+			}
+			renderedFiles[idx] = processFile(files[idx], baseURL)
 		}
 		wg.Done()
 	}
@@ -49,7 +53,7 @@ func RenderFiles(files []*git.File) []RenderedFile {
 	return renderedFiles
 }
 
-func processFile(file *git.File) RenderedFile {
+func processFile(file *git.File, rawBaseURL string) RenderedFile {
 	mt := file.MimeType
 	if mt.IsCSV() {
 		rendered, err := renderCsvFile(file)
@@ -62,7 +66,7 @@ func processFile(file *git.File) RenderedFile {
 		}
 		return rendered
 	} else if mt.IsText() && filepath.Ext(file.Filename) == ".md" {
-		rendered, err := renderMarkdownFile(file)
+		rendered, err := renderMarkdownFile(file, rawBaseURL)
 		if err != nil {
 			log.Error().Err(err).Msg("Error rendering markdown file for " + file.Filename)
 		}
