@@ -106,3 +106,9 @@ Send a summary to Andrew via Telegram:
 - Compare diff between old and new upstream on files we patched
 - Key conflict areas: `gist.go` (file sorting/commits), `router.go` (middleware chain), `middlewares.go` (session handling), `gist.go` (commit API), `user.go` (user model), `gist_header.html` (template), `gist.html` (view template), `gist.ts` (client JS), `render.go` / `markdown.go` (rendering pipeline)
 - If patch no longer applies cleanly, create a new dated branch and re-apply manually
+
+### Patch 6: Topics via git push option
+- **What it does:** Allows setting gist topics via `git push -o "topics=tag1 tag2"`, just like title/description/visibility. Eliminates the need to use the web UI edit form for topic updates (which was destroying binary files).
+- **Files modified:**
+  - `internal/hooks/post_receive.go` — parse `topics` push option, validate with `gisttopics` validator, set `gist.Topics` before `Update()` call
+- **Validation:** Same rules as web UI — max 10 topics, each max 50 chars, alphanumeric/hyphens/unicode only
