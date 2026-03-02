@@ -1,10 +1,11 @@
 # OpenGist Fork Maintenance Plan
 
 ## Overview
-Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with three patches:
+Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with four patches:
 1. **Everyone-can-manage** — any logged-in user can edit, delete, and change visibility of any gist
 2. **Cloudflare Access auto-login** — automatic SSO login via `Cf-Access-Authenticated-User-Email` header
 3. **Markdown relative image resolution** — relative image refs in markdown files resolve to sibling files in the same gist
+4. **Collapsible file sections** — binary files (images, audio, video, PDF) are collapsed by default; all files can be toggled
 
 ## Repositories
 - **Upstream:** `git@github.com:thomiceli/opengist.git` (remote: `origin`)
@@ -36,6 +37,12 @@ Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with 
   - `internal/render/markdown.go` — `renderMarkdownFile` accepts `rawBaseURL`; `newMarkdown()` conditionally includes the transformer
   - `internal/render/render.go` — `RenderFiles` and `processFile` accept `rawBaseURL` and pass it to markdown rendering
   - `internal/web/handlers/gist/gist.go` — `rawBaseURL()` helper builds the base URL from context; all three `RenderFiles` call sites (`GistIndex`, `GistJson`, `GistJs`) pass the raw base URL
+
+### Patch 4: Collapsible file sections
+- **What it does:** File content sections on the gist view page can be collapsed/expanded by clicking the file header. Binary files (images, audio, video, PDF) start collapsed by default; text files start expanded. A global "Collapse all / Expand all" toggle is available at the top of the file list.
+- **Files modified:**
+  - `templates/pages/gist.html` — added `data-binary` attribute to file cards, chevron icon in file headers, `gist-file-toggle`/`gist-file-body`/`gist-file-meta` CSS classes, and "Expand/Collapse all" button
+  - `public/ts/gist.ts` — collapse/expand logic: `setFileCollapsed()`, `isCollapsed()`, `updateToggleAllButton()`, per-file click handlers, global toggle button handler
 
 ### Initial branch: `everyone-can-edit-2026-03-01`
 
@@ -70,6 +77,8 @@ docker run --rm -p 6157:6157 192.168.86.209:5050/opengist:latest
 # - Test Cloudflare Access header: curl -H "Cf-Access-Authenticated-User-Email: user@example.com" http://localhost:6157/
 #   (should auto-login if user with that email exists)
 # - Create a gist with a .md file + image file, verify ![](image.jpg) renders inline
+# - Verify binary files are collapsed by default, text files expanded
+# - Test per-file toggle (click header) and global "Collapse/Expand all" button
 ```
 
 ### 4. Push
@@ -83,10 +92,10 @@ Send a summary to Andrew via Telegram:
 - Upstream changes since last sync
 - Whether rebase was clean or had conflicts
 - Build status
-- Any breaking changes affecting any of the three patches
+- Any breaking changes affecting any of the four patches
 
 ## If Something Breaks
 - Check upstream CHANGELOG for breaking changes
 - Compare diff between old and new upstream on files we patched
-- Key conflict areas: `router.go` (middleware chain), `middlewares.go` (session handling), `gist.go` (commit API), `user.go` (user model), `gist_header.html` (template), `render.go` / `markdown.go` (rendering pipeline)
+- Key conflict areas: `router.go` (middleware chain), `middlewares.go` (session handling), `gist.go` (commit API), `user.go` (user model), `gist_header.html` (template), `gist.html` (view template), `gist.ts` (client JS), `render.go` / `markdown.go` (rendering pipeline)
 - If patch no longer applies cleanly, create a new dated branch and re-apply manually
