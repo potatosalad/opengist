@@ -76,3 +76,70 @@ if (document.getElementById('gist').dataset.own) {
         el.disabled = true;
     });
 }
+// --- File collapse/expand ---
+
+function setFileCollapsed(card: HTMLElement, collapsed: boolean) {
+    const body = card.querySelector<HTMLElement>('.gist-file-body');
+    const metas = card.querySelectorAll<HTMLElement>('.gist-file-meta');
+    const chevron = card.querySelector<HTMLElement>('.gist-file-chevron');
+
+    if (body) body.style.display = collapsed ? 'none' : '';
+    metas.forEach(m => m.style.display = collapsed ? 'none' : '');
+    if (chevron) {
+        chevron.style.transform = collapsed ? 'rotate(0deg)' : 'rotate(90deg)';
+    }
+    card.dataset.collapsed = collapsed ? 'true' : 'false';
+}
+
+function isCollapsed(card: HTMLElement): boolean {
+    return card.dataset.collapsed === 'true';
+}
+
+function updateToggleAllButton() {
+    const cards = document.querySelectorAll<HTMLElement>('.gist-file-card');
+    const allCollapsed = Array.from(cards).every(c => isCollapsed(c));
+    const expandIcon = document.getElementById('toggle-all-icon-expand');
+    const collapseIcon = document.getElementById('toggle-all-icon-collapse');
+    const text = document.getElementById('toggle-all-text');
+
+    if (expandIcon && collapseIcon && text) {
+        if (allCollapsed) {
+            expandIcon.classList.remove('hidden');
+            collapseIcon.classList.add('hidden');
+            text.textContent = 'Expand all files';
+        } else {
+            expandIcon.classList.add('hidden');
+            collapseIcon.classList.remove('hidden');
+            text.textContent = 'Collapse all files';
+        }
+    }
+}
+
+// Initialize: binary files collapsed, text files expanded
+document.querySelectorAll<HTMLElement>('.gist-file-card').forEach(card => {
+    const isBinary = card.dataset.binary === 'true';
+    setFileCollapsed(card, isBinary);
+
+    // Click on file header row toggles
+    card.querySelectorAll<HTMLElement>('.gist-file-toggle').forEach(toggle => {
+        toggle.addEventListener('click', (e) => {
+            // Don't toggle if they clicked the anchor link
+            if ((e.target as HTMLElement).tagName === 'A') return;
+            setFileCollapsed(card, !isCollapsed(card));
+            updateToggleAllButton();
+        });
+    });
+});
+
+// Toggle all button
+const toggleAllBtn = document.getElementById('toggle-all-files');
+if (toggleAllBtn) {
+    toggleAllBtn.addEventListener('click', () => {
+        const cards = document.querySelectorAll<HTMLElement>('.gist-file-card');
+        const allCollapsed = Array.from(cards).every(c => isCollapsed(c));
+        cards.forEach(card => setFileCollapsed(card, !allCollapsed));
+        updateToggleAllButton();
+    });
+}
+
+updateToggleAllButton();
