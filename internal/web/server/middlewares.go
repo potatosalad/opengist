@@ -58,6 +58,7 @@ func (s *Server) registerMiddlewares() {
 	s.echo.Use(middleware.Recover())
 	s.echo.Use(middleware.Secure())
 	s.echo.Use(Middleware(sessionInit).toEcho())
+	s.echo.Use(Middleware(cfAccessAutoLogin).toEcho())
 	s.echo.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		TokenLookup:    "form:_csrf,header:X-CSRF-Token",
 		CookiePath:     "/",
@@ -307,6 +308,38 @@ func sessionInit(next Handler) Handler {
 
 		ctx.User = nil
 		ctx.SetData("userLogged", nil)
+		return next(ctx)
+	}
+}
+
+// cfAccessAutoLogin checks for the Cf-Access-Authenticated-User-Email header
+// set by Cloudflare Access. If present and the user is not already logged in,
+// it looks up the user by email and creates a session automatically.
+func cfAccessAutoLogin(next Handler) Handler {
+	return func(ctx *context.Context) error {
+		if ctx.User != nil {
+			return next(ctx)
+		}
+
+		email := ctx.Request().Header.Get("Cf-Access-Authenticated-User-Email")
+		if email == "" {
+			return next(ctx)
+		}
+
+		user, err := db.GetUserByEmail(email)
+		if err != nil || user == nil {
+			return next(ctx)
+		}
+
+		sess := ctx.GetSession()
+		sess.Values["user"] = user.ID
+		sess.Options.MaxAge = 60 * 60 * 24 * 365
+		ctx.SaveSession(sess)
+
+		ctx.User = user
+		ctx.SetData("userLogged", user)
+		ctx.SetData("currentStyle", user.GetStyle())
+
 		return next(ctx)
 	}
 }
