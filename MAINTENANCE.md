@@ -2,7 +2,7 @@
 
 ## Overview
 Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with three patches:
-1. **Everyone-can-edit** — any logged-in user can edit any gist (with proper git attribution)
+1. **Everyone-can-manage** — any logged-in user can edit, delete, and change visibility of any gist
 2. **Cloudflare Access auto-login** — automatic SSO login via `Cf-Access-Authenticated-User-Email` header
 3. **Markdown relative image resolution** — relative image refs in markdown files resolve to sibling files in the same gist
 
@@ -15,13 +15,13 @@ Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with 
 
 ## Patches (on branch `everyone-can-edit-YYYY-MM-DD`)
 
-### Patch 1: everyone-can-edit
-- **What it does:** Any authenticated user can edit any gist. Edits are attributed to the editing user in the git commit (author field), preserving the original gist owner. Delete and visibility changes remain owner-only.
+### Patch 1: everyone-can-manage
+- **What it does:** Any authenticated user can edit, delete, and change visibility (public/unlisted/secret) of any gist. Edits are attributed to the editing user in the git commit (author field), preserving the original gist owner.
 - **Files modified:**
-  - `internal/web/server/router.go` — removed `writePermission` middleware from edit routes
+  - `internal/web/server/router.go` — removed `writePermission` middleware from edit, visibility, and delete routes
   - `internal/db/gist.go` — commit functions accept editor's name/email
   - `internal/web/handlers/gist/create.go` + `edit.go` — pass editing user info to commits
-  - `templates/base/gist_header.html` — Edit button visible to all logged-in users
+  - `templates/base/gist_header.html` — Edit and Delete buttons visible to all logged-in users (owner-only gate removed from delete)
 
 ### Patch 2: Cloudflare Access auto-login
 - **What it does:** When the `Cf-Access-Authenticated-User-Email` HTTP header is present, looks up the user by email and auto-creates a session. Only works for existing accounts; skips if already logged in.
@@ -33,8 +33,8 @@ Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with 
 - **What it does:** When a gist contains a markdown file (e.g. `doc.md`) alongside image files (e.g. `photo.jpg`), relative image references like `![](photo.jpg)` or `![](./photo.jpg)` are rewritten to point to the gist's raw file endpoint, so images render inline correctly.
 - **Files modified:**
   - `internal/render/markdown_relative_links.go` — new goldmark AST transformer `relativeImageRewriter` that rewrites relative image destinations to `{baseURL}/{user}/{gist}/raw/{revision}/{filename}`
-  - `internal/render/markdown.go` — `renderMarkdownFile` accepts `rawBaseURL`; new `newMarkdownWithSvgAndImageRewrite()` constructor includes the transformer
-  - `internal/render/render.go` — `RenderFiles` and `processFile` accept optional `rawBaseURL` and pass it to markdown rendering
+  - `internal/render/markdown.go` — `renderMarkdownFile` accepts `rawBaseURL`; `newMarkdown()` conditionally includes the transformer
+  - `internal/render/render.go` — `RenderFiles` and `processFile` accept `rawBaseURL` and pass it to markdown rendering
   - `internal/web/handlers/gist/gist.go` — `rawBaseURL()` helper builds the base URL from context; all three `RenderFiles` call sites (`GistIndex`, `GistJson`, `GistJs`) pass the raw base URL
 
 ### Initial branch: `everyone-can-edit-2026-03-01`
@@ -65,10 +65,10 @@ docker buildx build --platform linux/amd64 -t 192.168.86.209:5050/opengist:lates
 # Quick smoke test
 docker run --rm -p 6157:6157 192.168.86.209:5050/opengist:latest
 # Verify:
-# - Create 2+ users, test cross-user gist editing, check git log attribution
+# - Create 2+ users, test cross-user gist editing, deleting, and visibility changes
+# - Check git log attribution (edits attributed to editing user, not owner)
 # - Test Cloudflare Access header: curl -H "Cf-Access-Authenticated-User-Email: user@example.com" http://localhost:6157/
 #   (should auto-login if user with that email exists)
-# - Confirm delete button is still owner-only
 # - Create a gist with a .md file + image file, verify ![](image.jpg) renders inline
 ```
 
