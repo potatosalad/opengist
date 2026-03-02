@@ -35,7 +35,7 @@ func GistIndex(ctx *context.Context) error {
 		return ctx.ErrorRes(500, "Error fetching files", err)
 	}
 
-	renderedFiles := render.RenderFiles(files)
+	renderedFiles := render.RenderFiles(files, rawBaseURL(ctx, gist, revision))
 
 	ctx.SetData("page", "code")
 	ctx.SetData("commit", revision)
@@ -52,7 +52,7 @@ func GistJson(ctx *context.Context) error {
 		return ctx.ErrorRes(500, "Error fetching files", err)
 	}
 
-	renderedFiles := render.RenderFiles(files)
+	renderedFiles := render.RenderFiles(files, rawBaseURL(ctx, gist, "HEAD"))
 	ctx.SetData("files", renderedFiles)
 
 	topics, err := gist.GetTopics()
@@ -109,7 +109,7 @@ func GistJs(ctx *context.Context) error {
 		return ctx.ErrorRes(500, "Error fetching files", err)
 	}
 
-	renderedFiles := render.RenderFiles(files)
+	renderedFiles := render.RenderFiles(files, rawBaseURL(ctx, gist, "HEAD"))
 	ctx.SetData("files", renderedFiles)
 
 	htmlbuf := bytes.Buffer{}
@@ -146,6 +146,15 @@ func Preview(ctx *context.Context) error {
 	}
 
 	return ctx.PlainText(200, previewStr)
+}
+
+
+func rawBaseURL(ctx *context.Context, gist *db.Gist, revision string) string {
+	base := ctx.GetData("baseHttpUrl")
+	if base == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s/%s/raw/%s", base.(string), gist.User.Username, gist.Identifier(), revision)
 }
 
 func escapeJavaScriptContent(htmlContent, cssUrl, themeUrl string) (string, error) {

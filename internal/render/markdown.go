@@ -28,9 +28,9 @@ func MarkdownGistPreview(gist *db.Gist) (RenderedGist, error) {
 	}, err
 }
 
-func renderMarkdownFile(file *git.File) (HighlightedFile, error) {
+func renderMarkdownFile(file *git.File, rawBaseURL string) (HighlightedFile, error) {
 	var buf bytes.Buffer
-	err := newMarkdownWithSvgExtension().Convert([]byte(file.Content), &buf)
+	err := newMarkdownWithSvgAndImageRewrite(rawBaseURL).Convert([]byte(file.Content), &buf)
 
 	return HighlightedFile{
 		File: file,
@@ -70,4 +70,30 @@ func newMarkdown(extraExtensions ...goldmark.Extender) goldmark.Markdown {
 
 func newMarkdownWithSvgExtension() goldmark.Markdown {
 	return newMarkdown(&svgToImgBase64{})
+}
+
+func newMarkdownWithSvgAndImageRewrite(rawBaseURL string) goldmark.Markdown {
+	md := newMarkdown(&svgToImgBase64{})
+	if rawBaseURL != "" {
+		// Re-create with the image rewriter transformer
+		return goldmark.New(
+			goldmark.WithExtensions(
+				extension.GFM,
+				highlighting.NewHighlighting(
+					highlighting.WithStyle("catppuccin-latte"),
+					highlighting.WithFormatOptions(html.WithClasses(true)),
+				),
+				emoji.Emoji,
+				&mermaid.Extender{},
+				&svgToImgBase64{},
+			),
+			goldmark.WithParserOptions(
+				parser.WithASTTransformers(
+					util.Prioritized(&checkboxTransformer{}, 10000),
+					util.Prioritized(&relativeImageRewriter{rawBaseURL: rawBaseURL}, 9999),
+				),
+			),
+		)
+	}
+	return md
 }
