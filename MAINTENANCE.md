@@ -104,7 +104,7 @@ Send a summary to Andrew via Telegram:
 ## If Something Breaks
 - Check upstream CHANGELOG for breaking changes
 - Compare diff between old and new upstream on files we patched
-- Key conflict areas: `gist.go` (file sorting/commits), `router.go` (middleware chain), `middlewares.go` (session handling), `gist.go` (commit API), `user.go` (user model), `gist_header.html` (template), `gist.html` (view template), `gist.ts` (client JS), `render.go` / `markdown.go` (rendering pipeline)
+- Key conflict areas: `gist.go` (file sorting/commits), `router.go` (middleware chain), `middlewares.go` (session handling), `gist.go` (commit API), `user.go` (user model), `gist_header.html` (template), `gist.html` (view template), `gist.ts` (client JS), `render.go` / `markdown.go` (rendering pipeline), `post_receive.go` (push options)
 - If patch no longer applies cleanly, create a new dated branch and re-apply manually
 
 ### Patch 6: Topics via git push option
