@@ -1,9 +1,10 @@
 # OpenGist Fork Maintenance Plan
 
 ## Overview
-Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with two patches:
+Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with three patches:
 1. **Everyone-can-edit** — any logged-in user can edit any gist (with proper git attribution)
 2. **Cloudflare Access auto-login** — automatic SSO login via `Cf-Access-Authenticated-User-Email` header
+3. **Markdown relative image resolution** — relative image refs in markdown files resolve to sibling files in the same gist
 
 ## Repositories
 - **Upstream:** `git@github.com:thomiceli/opengist.git` (remote: `origin`)
@@ -27,6 +28,14 @@ Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with 
 - **Files modified:**
   - `internal/db/user.go` — added `GetUserByEmail()` function
   - `internal/web/server/middlewares.go` — `cfAccessAutoLogin` middleware after `sessionInit`
+
+### Patch 3: Markdown relative image resolution
+- **What it does:** When a gist contains a markdown file (e.g. `doc.md`) alongside image files (e.g. `photo.jpg`), relative image references like `![](photo.jpg)` or `![](./photo.jpg)` are rewritten to point to the gist's raw file endpoint, so images render inline correctly.
+- **Files modified:**
+  - `internal/render/markdown_relative_links.go` — new goldmark AST transformer `relativeImageRewriter` that rewrites relative image destinations to `{baseURL}/{user}/{gist}/raw/{revision}/{filename}`
+  - `internal/render/markdown.go` — `renderMarkdownFile` accepts `rawBaseURL`; new `newMarkdownWithSvgAndImageRewrite()` constructor includes the transformer
+  - `internal/render/render.go` — `RenderFiles` and `processFile` accept optional `rawBaseURL` and pass it to markdown rendering
+  - `internal/web/handlers/gist/gist.go` — `rawBaseURL()` helper builds the base URL from context; all three `RenderFiles` call sites (`GistIndex`, `GistJson`, `GistJs`) pass the raw base URL
 
 ### Initial branch: `everyone-can-edit-2026-03-01`
 
@@ -60,6 +69,7 @@ docker run --rm -p 6157:6157 192.168.86.209:5050/opengist:latest
 # - Test Cloudflare Access header: curl -H "Cf-Access-Authenticated-User-Email: user@example.com" http://localhost:6157/
 #   (should auto-login if user with that email exists)
 # - Confirm delete button is still owner-only
+# - Create a gist with a .md file + image file, verify ![](image.jpg) renders inline
 ```
 
 ### 4. Push
@@ -73,10 +83,10 @@ Send a summary to Andrew via Telegram:
 - Upstream changes since last sync
 - Whether rebase was clean or had conflicts
 - Build status
-- Any breaking changes affecting either patch
+- Any breaking changes affecting any of the three patches
 
 ## If Something Breaks
 - Check upstream CHANGELOG for breaking changes
 - Compare diff between old and new upstream on files we patched
-- Key conflict areas: `router.go` (middleware chain), `middlewares.go` (session handling), `gist.go` (commit API), `user.go` (user model), `gist_header.html` (template)
+- Key conflict areas: `router.go` (middleware chain), `middlewares.go` (session handling), `gist.go` (commit API), `user.go` (user model), `gist_header.html` (template), `render.go` / `markdown.go` (rendering pipeline)
 - If patch no longer applies cleanly, create a new dated branch and re-apply manually
