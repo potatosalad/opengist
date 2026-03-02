@@ -442,6 +442,20 @@ func (gist *Gist) Files(revision string, truncate bool) ([]*git.File, error) {
 			MimeType:  git.DetectMimeType([]byte(shortContent), filepath.Ext(fileCat.Name)),
 		})
 	}
+
+	// Sort files: markdown files first (alphabetically), then all others (alphabetically)
+	slices.SortStableFunc(files, func(a, b *git.File) int {
+		aIsMd := strings.EqualFold(filepath.Ext(a.Filename), ".md")
+		bIsMd := strings.EqualFold(filepath.Ext(b.Filename), ".md")
+		if aIsMd && !bIsMd {
+			return -1
+		}
+		if !aIsMd && bIsMd {
+			return 1
+		}
+		return strings.Compare(strings.ToLower(a.Filename), strings.ToLower(b.Filename))
+	})
+
 	return files, err
 }
 
