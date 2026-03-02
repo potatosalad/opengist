@@ -18,7 +18,7 @@ import (
 
 func MarkdownGistPreview(gist *db.Gist) (RenderedGist, error) {
 	var buf bytes.Buffer
-	err := newMarkdown().Convert([]byte(gist.Preview), &buf)
+	err := newMarkdown("").Convert([]byte(gist.Preview), &buf)
 
 	// remove links in Markdown Preview, quick fix for now
 	re := regexp.MustCompile(`<a\b[^>]*>(.*?)</a>`)
@@ -30,7 +30,7 @@ func MarkdownGistPreview(gist *db.Gist) (RenderedGist, error) {
 
 func renderMarkdownFile(file *git.File, rawBaseURL string) (HighlightedFile, error) {
 	var buf bytes.Buffer
-	err := newMarkdownWithSvgAndImageRewrite(rawBaseURL).Convert([]byte(file.Content), &buf)
+	err := newMarkdown(rawBaseURL, &svgToImgBase64{}).Convert([]byte(file.Content), &buf)
 
 	return HighlightedFile{
 		File: file,
@@ -38,14 +38,15 @@ func renderMarkdownFile(file *git.File, rawBaseURL string) (HighlightedFile, err
 		Type: "Markdown",
 	}, err
 }
+
 func MarkdownString(content string) (string, error) {
 	var buf bytes.Buffer
-	err := newMarkdownWithSvgExtension().Convert([]byte(content), &buf)
+	err := newMarkdown("", &svgToImgBase64{}).Convert([]byte(content), &buf)
 
 	return buf.String(), err
 }
 
-func newMarkdown(extraExtensions ...goldmark.Extender) goldmark.Markdown {
+func newMarkdown(rawBaseURL string, extraExtensions ...goldmark.Extender) goldmark.Markdown {
 	extensions := []goldmark.Extender{
 		extension.GFM,
 		highlighting.NewHighlighting(
@@ -58,42 +59,17 @@ func newMarkdown(extraExtensions ...goldmark.Extender) goldmark.Markdown {
 
 	extensions = append(extensions, extraExtensions...)
 
+	transformers := []util.PrioritizedValue{
+		util.Prioritized(&checkboxTransformer{}, 10000),
+	}
+	if rawBaseURL != "" {
+		transformers = append(transformers, util.Prioritized(&relativeImageRewriter{rawBaseURL: rawBaseURL}, 9999))
+	}
+
 	return goldmark.New(
 		goldmark.WithExtensions(extensions...),
 		goldmark.WithParserOptions(
-			parser.WithASTTransformers(
-				util.Prioritized(&checkboxTransformer{}, 10000),
-			),
+			parser.WithASTTransformers(transformers...),
 		),
 	)
-}
-
-func newMarkdownWithSvgExtension() goldmark.Markdown {
-	return newMarkdown(&svgToImgBase64{})
-}
-
-func newMarkdownWithSvgAndImageRewrite(rawBaseURL string) goldmark.Markdown {
-	md := newMarkdown(&svgToImgBase64{})
-	if rawBaseURL != "" {
-		// Re-create with the image rewriter transformer
-		return goldmark.New(
-			goldmark.WithExtensions(
-				extension.GFM,
-				highlighting.NewHighlighting(
-					highlighting.WithStyle("catppuccin-latte"),
-					highlighting.WithFormatOptions(html.WithClasses(true)),
-				),
-				emoji.Emoji,
-				&mermaid.Extender{},
-				&svgToImgBase64{},
-			),
-			goldmark.WithParserOptions(
-				parser.WithASTTransformers(
-					util.Prioritized(&checkboxTransformer{}, 10000),
-					util.Prioritized(&relativeImageRewriter{rawBaseURL: rawBaseURL}, 9999),
-				),
-			),
-		)
-	}
-	return md
 }
