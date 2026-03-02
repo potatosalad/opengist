@@ -127,13 +127,13 @@ func (s *Server) registerRoutes() {
 			sC.POST("/delete", gist.DeleteGist, logged, writePermission)
 			sC.GET("/raw/:revision/:file", gist.RawFile)
 			sC.GET("/download/:revision/:file", gist.DownloadFile)
-			sC.GET("/edit", gist.Edit, logged, writePermission)
-			sC.POST("/edit", gist.ProcessCreate, logged, writePermission)
+			sC.GET("/edit", gist.Edit, logged)
+			sC.POST("/edit", gist.ProcessCreate, logged)
 			sC.POST("/like", gist.Like, logged)
 			sC.GET("/likes", gist.Likes, checkRequireLogin)
 			sC.POST("/fork", gist.Fork, logged)
 			sC.GET("/forks", gist.Forks, checkRequireLogin)
-			sC.PUT("/checkbox", gist.Checkbox, logged, writePermission)
+			sC.PUT("/checkbox", gist.Checkbox, logged)
 		}
 	}
 
