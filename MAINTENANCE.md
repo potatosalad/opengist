@@ -1,11 +1,12 @@
 # OpenGist Fork Maintenance Plan
 
 ## Overview
-Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with four patches:
+Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with five patches:
 1. **Everyone-can-manage** — any logged-in user can edit, delete, and change visibility of any gist
 2. **Cloudflare Access auto-login** — automatic SSO login via `Cf-Access-Authenticated-User-Email` header
 3. **Markdown relative image resolution** — relative image refs in markdown files resolve to sibling files in the same gist
 4. **Collapsible file sections** — binary files (images, audio, video, PDF) are collapsed by default; all files can be toggled
+5. **Markdown files first** — markdown files are listed before all other files on the gist display page
 
 ## Repositories
 - **Upstream:** `git@github.com:thomiceli/opengist.git` (remote: `origin`)
@@ -44,6 +45,11 @@ Custom fork of [thomiceli/opengist](https://github.com/thomiceli/opengist) with 
   - `templates/pages/gist.html` — added `data-binary` attribute to file cards, chevron icon in file headers, `gist-file-toggle`/`gist-file-body`/`gist-file-meta` CSS classes, and "Expand/Collapse all" button
   - `public/ts/gist.ts` — collapse/expand logic: `setFileCollapsed()`, `isCollapsed()`, `updateToggleAllButton()`, per-file click handlers, global toggle button handler
 
+### Patch 5: Markdown files first
+- **What it does:** On the gist display page, markdown files (.md) are sorted alphabetically before all other file types. Non-markdown files follow in their own alphabetical order. This ensures documentation is always visible at the top.
+- **Files modified:**
+  - `internal/db/gist.go` — added `slices.SortStableFunc` in `Files()` method to sort markdown-extension files before others
+
 ### Initial branch: `everyone-can-edit-2026-03-01`
 
 ## Monthly Maintenance Procedure
@@ -79,6 +85,7 @@ docker run --rm -p 6157:6157 192.168.86.209:5050/opengist:latest
 # - Create a gist with a .md file + image file, verify ![](image.jpg) renders inline
 # - Verify binary files are collapsed by default, text files expanded
 # - Test per-file toggle (click header) and global "Collapse/Expand all" button
+# - Create a gist with a .md file + non-md files, verify .md appears first
 ```
 
 ### 4. Push
@@ -97,5 +104,5 @@ Send a summary to Andrew via Telegram:
 ## If Something Breaks
 - Check upstream CHANGELOG for breaking changes
 - Compare diff between old and new upstream on files we patched
-- Key conflict areas: `router.go` (middleware chain), `middlewares.go` (session handling), `gist.go` (commit API), `user.go` (user model), `gist_header.html` (template), `gist.html` (view template), `gist.ts` (client JS), `render.go` / `markdown.go` (rendering pipeline)
+- Key conflict areas: `gist.go` (file sorting/commits), `router.go` (middleware chain), `middlewares.go` (session handling), `gist.go` (commit API), `user.go` (user model), `gist_header.html` (template), `gist.html` (view template), `gist.ts` (client JS), `render.go` / `markdown.go` (rendering pipeline)
 - If patch no longer applies cleanly, create a new dated branch and re-apply manually
