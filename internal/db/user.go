@@ -124,6 +124,14 @@ func GetUserById(userId uint) (*User, error) {
 	return user, err
 }
 
+func GetUserByEmail(email string) (*User, error) {
+	user := new(User)
+	err := db.
+		Where("email = ?", email).
+		First(&user).Error
+	return user, err
+}
+
 func GetUsersFromEmails(emailsSet map[string]struct{}) (map[string]*User, error) {
 	var users []*User
 
