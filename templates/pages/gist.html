@@ -1,17 +1,31 @@
 {{ template "header" .}}
 {{ template "gist_header" .}}
     {{ if .files }}
-        <div class="grid gap-y-4">
+        <div class="flex justify-end mb-2">
+            <button id="toggle-all-files" type="button" class="inline-flex items-center text-xs text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 select-none cursor-pointer">
+                <svg id="toggle-all-icon-expand" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-1 hidden">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+                <svg id="toggle-all-icon-collapse" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-1 hidden">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                </svg>
+                <span id="toggle-all-text"></span>
+            </button>
+        </div>
+        <div class="grid gap-y-4" id="gist-files">
         {{ range $file := .files }}
-        <div class="rounded-md border border-1 border-gray-200 dark:border-gray-700 overflow-auto" data-file="{{ $file.Filename }}">
+        <div class="rounded-md border border-1 border-gray-200 dark:border-gray-700 overflow-auto gist-file-card" data-file="{{ $file.Filename }}" data-binary="{{ if not $file.MimeType.IsText }}true{{ else }}false{{ end }}">
             <div class="border-b-1 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 my-auto block">
                 <div class="ml-4 py-1.5 flex">
 
-                    <span class="flex-auto inline-flex items-center text-sm text-slate-700 dark:text-slate-300 filename" id="file-{{ slug $file.Filename }}">
+                    <span class="flex-auto inline-flex items-center text-sm text-slate-700 dark:text-slate-300 filename cursor-pointer select-none gist-file-toggle" id="file-{{ slug $file.Filename }}">
+                        <svg class="gist-file-chevron h-4 w-4 mr-1 text-slate-500 dark:text-slate-400 transition-transform duration-150" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                         </svg>
-                        <a href="{{ $.baseHttpUrl }}/{{ $.gist.User.Username }}/{{ $.gist.Identifier }}#file-{{ slug $file.Filename }}" class="hover:text-primary-600 ml-2 mr-1">{{ $file.Filename }}</a>
+                        <a href="{{ $.baseHttpUrl }}/{{ $.gist.User.Username }}/{{ $.gist.Identifier }}#file-{{ slug $file.Filename }}" class="hover:text-primary-600 ml-2 mr-1" onclick="event.stopPropagation()">{{ $file.Filename }}</a>
                         <span class="hidden sm:block">
                             <span class="text-gray-400"> · {{ $file.HumanSize }} · {{ $file.Type }}</span>
                         </span>
@@ -38,22 +52,22 @@
                     <div class="hidden gist-content">{{ $file.Content }}</div>
                 </div>
                 {{ if and $file.Truncated $file.MimeType.IsText }}
-                <div class="text-sm px-4 py-1.5 border-t-1 border-gray-200 dark:border-gray-700">
+                <div class="text-sm px-4 py-1.5 border-t-1 border-gray-200 dark:border-gray-700 gist-file-meta">
                     {{ $.locale.Tr "gist.file-truncated" }} <a href="{{ $.c.ExternalUrl }}/{{ $.gist.User.Username }}/{{ $.gist.Identifier }}/raw/{{ $.commit }}/{{$file.Filename}}">{{ $.locale.Tr "gist.watch-full-file" }}</a>
                 </div>
                 {{ end }}
                 {{ if not $file.MimeType.CanBeRendered }}
-                <div class="text-sm px-4 py-1.5 border-t-1 border-gray-200 dark:border-gray-700">
+                <div class="text-sm px-4 py-1.5 border-t-1 border-gray-200 dark:border-gray-700 gist-file-meta">
                     {{ $.locale.Tr "gist.file-raw" }} <a href="{{ $.c.ExternalUrl }}/{{ $.gist.User.Username }}/{{ $.gist.Identifier }}/raw/{{ $.commit }}/{{$file.Filename}}">{{ $.locale.Tr "gist.watch-full-file" }}</a>
                 </div>
                 {{ end }}
                 {{ if and (not $file.MimeType.IsText) ($file.MimeType.IsCSV) }}
-                <div class="text-sm px-4 py-1.5 border-t-1 border-gray-200 dark:border-gray-700">
+                <div class="text-sm px-4 py-1.5 border-t-1 border-gray-200 dark:border-gray-700 gist-file-meta">
                     {{ $.locale.Tr "gist.file-not-valid" }}
                 </div>
                 {{ end }}
             </div>
-            <div class="overflow-auto">
+            <div class="overflow-auto gist-file-body">
                 {{ if $file.MimeType.IsText }}
                 {{ if eq $file.InternalType "CSVFile" }}
                     <table class="csv-table">
