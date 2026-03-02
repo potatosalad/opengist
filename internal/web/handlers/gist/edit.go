@@ -44,10 +44,11 @@ func Checkbox(ctx *context.Context) error {
 		return ctx.ErrorRes(500, "Error checking checkbox", err)
 	}
 
+	user := ctx.User
 	if err = gist.AddAndCommitFile(&db.FileDTO{
 		Filename: filename,
 		Content:  markdown,
-	}); err != nil {
+	}, user.Username, user.Email); err != nil {
 		return ctx.ErrorRes(500, "Error adding and committing files", err)
 	}
 
